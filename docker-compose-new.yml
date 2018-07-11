@@ -1,0 +1,89 @@
+version: '3.1'
+
+volumes:
+    prometheus_data: {}
+    grafana_data: {}
+
+networks:
+  kafka:
+
+services:
+
+  prometheus:
+    image: prom/prometheus:v2.1.0
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - 9090:9090
+    links:
+      - kafka-exporter
+      - jmx-exporter
+    networks:
+      - kafka
+    restart: always
+
+  grafana:
+    image: grafana/grafana
+    depends_on:
+      - prometheus
+    ports:
+     - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      - ./grafana/config.monitoring
+    networks:
+      - kafka
+    restart: always
+  
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    ports:
+      - 9308:9308
+    entrypoint:
+        - /bin/kafka_exporter
+        - --kafka.server=kafka:9092   
+    links:
+      - kafka
+    networks:
+      - kafka
+  
+  jmx-exporter:
+    image: sscaling/jmx-prometheus-exporter
+    ports:
+      - 5556:5556
+    volumes:
+      - $PWD/jmx_exporter/config.yml:/opt/jmx_exporter/config.yml
+    links:
+      - kafka
+    networks:
+      - kafka
+
+  zookeeper:
+    image: debezium/zookeeper:${DEBEZIUM_VERSION}
+    ports:
+     - 2181:2181
+     - 2888:2888
+     - 3888:3888
+    networks:
+      - kafka
+ 
+  kafka:
+    image: debezium/kafka:${DEBEZIUM_VERSION}
+    hostname: kafka
+    ports:
+     - 9092:9092
+    links:
+     - zookeeper
+    environment:
+     - ZOOKEEPER_CONNECT=zookeeper:2181
+     - KAFKA_JMX_OPTS=-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=9090 -Dcom.sun.management.jmxremote.rmi.port=9090 -Dcom.sun.management.jmxremote.host=kafka -Djava.rmi.server.hostname=kafka'
+    networks:
+      - kafka

@@ -1,0 +1,5 @@
+---
+hostPort: kafka:9090
+ssl: false
+whitelistObjectNames: ["*"]
+rules:
