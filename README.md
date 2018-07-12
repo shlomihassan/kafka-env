@@ -2,6 +2,16 @@
 
 # Contents
 
+To get this working properly you must add the following lines to your /etc/hosts file
+127.0.0.1       kafka-1
+127.0.0.1       kafka-2
+127.0.0.1       kafka-3
+127.0.0.1       zookeeper-1
+127.0.0.1       zookeeper-2
+127.0.0.1       zookeeper-3
+ 
+
+
 - Introduction
   - [Overview](#a-prometheus--grafana-docker-compose-stack)
   - [Pre-requisites](#pre-requisites)
