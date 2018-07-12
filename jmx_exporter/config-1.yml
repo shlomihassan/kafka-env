@@ -1,0 +1,5 @@
+---
+jmxUrl: service:jmx:rmi:///jndi/rmi://kafka-1:9095/jmxrmi
+ssl: false
+rules:
+- pattern: ".*"

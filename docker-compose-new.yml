@@ -8,7 +8,6 @@ networks:
   kafka:
 
 services:
-
   prometheus:
     image: prom/prometheus:v2.1.0
     volumes:
@@ -26,6 +25,9 @@ services:
       - jmx-exporter
     networks:
       - kafka
+    depends_on:
+      - kafka-exporter
+      - jmx-exporter
     restart: always
 
   grafana:
@@ -49,41 +51,141 @@ services:
       - 9308:9308
     entrypoint:
         - /bin/kafka_exporter
-        - --kafka.server=kafka:9092   
+        - --kafka.server=kafka-1:19092
+        - --kafka.server=kafka-2:29092
+        - --kafka.server=kafka-3:39092   
     links:
-      - kafka
+      - kafka-1
+      - kafka-2
+      - kafka-3
     networks:
       - kafka
-  
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+    restart: always
+ 
   jmx-exporter:
     image: sscaling/jmx-prometheus-exporter
     ports:
       - 5556:5556
     volumes:
-      - $PWD/jmx_exporter/config.yml:/opt/jmx_exporter/config.yml
+      - $PWD/jmx_exporter/config-1.yml:/opt/jmx_exporter/config-1.yml
+      - $PWD/jmx_exporter/config-2.yml:/opt/jmx_exporter/config-2.yml
+      - $PWD/jmx_exporter/config-3.yml:/opt/jmx_exporter/config-3.yml
     links:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+    networks:
       - kafka
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+
+  zookeeper-1:
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+     - 22181:22181 
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 22181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zookeeper-1:22888:23888;zookeeper-2:32888:33888;zookeeper-3:42888:43888
+    networks:
+      - kafka
+  
+  zookeeper-2:
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+     - 32181:32181
+    environment:
+      ZOOKEEPER_SERVER_ID: 2
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zookeeper-1:22888:23888;zookeeper-2:32888:33888;zookeeper-3:42888:43888
     networks:
       - kafka
 
-  zookeeper:
-    image: debezium/zookeeper:${DEBEZIUM_VERSION}
+  zookeeper-3:
+    image: confluentinc/cp-zookeeper:latest
     ports:
-     - 2181:2181
-     - 2888:2888
-     - 3888:3888
+     - 42181:42181
+    environment:
+      ZOOKEEPER_SERVER_ID: 3
+      ZOOKEEPER_CLIENT_PORT: 42181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zookeeper-1:22888:23888;zookeeper-2:32888:33888;zookeeper-3:42888:43888
     networks:
       - kafka
- 
-  kafka:
-    image: debezium/kafka:${DEBEZIUM_VERSION}
-    hostname: kafka
+  
+  kafka-1:
+    hostname: kafka-1
     ports:
-     - 9092:9092
+     - 19092:19092
+    image: confluentinc/cp-kafka:latest
     links:
-     - zookeeper
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
     environment:
-     - ZOOKEEPER_CONNECT=zookeeper:2181
-     - KAFKA_JMX_OPTS=-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=9090 -Dcom.sun.management.jmxremote.rmi.port=9090 -Dcom.sun.management.jmxremote.host=kafka -Djava.rmi.server.hostname=kafka'
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:22181,zookeeper-2:32181,zookeeper-3:42181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:19092
+      KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=9095 -Dcom.sun.management.jmxremote.rmi.port=9095 -Dcom.sun.management.jmxremote.host=kafka-1 -Djava.rmi.server.hostname=kafka-1'
+    networks:
+      - kafka
+
+  kafka-2:
+    hostname: kafka-2
+    ports:
+     - 29092:29092
+    image: confluentinc/cp-kafka:latest
+    links:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:22181,zookeeper-2:32181,zookeeper-3:42181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:29092
+      KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=9091 -Dcom.sun.management.jmxremote.rmi.port=9091 -Dcom.sun.management.jmxremote.host=kafka-2 -Djava.rmi.server.hostname=kafka-2'
+    networks:
+      - kafka
+  
+  kafka-3:
+    hostname: kafka-3
+    ports:
+     - 39092:39092
+    image: confluentinc/cp-kafka:latest
+    links:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:22181,zookeeper-2:32181,zookeeper-3:42181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:39092
+      KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=9093 -Dcom.sun.management.jmxremote.rmi.port=9093 -Dcom.sun.management.jmxremote.host=kafka-3 -Djava.rmi.server.hostname=kafka-3'
     networks:
       - kafka
