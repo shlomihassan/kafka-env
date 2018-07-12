@@ -9,20 +9,6 @@ global:
   external_labels:
       monitor: 'my-project'
 
-# Load and evaluate rules in this file every 'evaluation_interval' seconds.
-rule_files:
-  - 'alert.rules'
-  # - "first.rules"
-  # - "second.rules"
-
-# alert
-alerting:
-  alertmanagers:
-  - scheme: http
-    static_configs:
-    - targets:
-      - "alertmanager:9093"
-
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
@@ -40,36 +26,15 @@ scrape_configs:
     static_configs:
      - targets:
        - kafka-exporter:9308
-
-  - job_name: 'jmx_kafka'
+  - job_name: 'jmx_kafka_1'
     static_configs:
      - targets:
-       - jmx-exporter:5556
-
-  - job_name: 'cadvisor'
-
-    # Override the global default and scrape targets from this job every 5 seconds.
-    scrape_interval: 5s
-
-    dns_sd_configs:
-    - names:
-      - 'tasks.cadvisor'
-      type: 'A'
-      port: 8080
-
-#     static_configs:
-#          - targets: ['cadvisor:8080']
-
-  - job_name: 'node-exporter'
-
-    # Override the global default and scrape targets from this job every 5 seconds.
-    scrape_interval: 5s
-
-    dns_sd_configs:
-    - names:
-      - 'tasks.node-exporter'
-      type: 'A'
-      port: 9100
-    
-#     static_configs:
-#          - targets: ['node-exporter:9100']
+       - jmx-exporter-1:5556
+  - job_name: 'jmx_kafka_2'
+    static_configs:
+     - targets:
+       - jmx-exporter-2:5557
+  - job_name: 'jmx_kafka_3'
+    static_configs:
+     - targets:
+       - jmx-exporter-3:5558
